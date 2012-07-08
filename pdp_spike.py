@@ -7,11 +7,26 @@ import utils, sys
 
 from scsi import *
 
+################################################################################
+
+"""
 ### entry callback
 # dbg: pydbg instance
 # args: arguments on stack when hook was hit
-def cb_entry_SendASPI32Command(dbg, args):
+def cb_entry(dbg, args):
     return DBG_CONTINUE
+
+### exit callback
+# dbg: pydbg instance
+# args: arguments on stack when hook was hit
+# ret: value in EAX register
+def cb_exit(dbg, args, ret):
+    return DBG_CONTINUE
+"""
+
+################################################################################
+## CALLBACKS -- ASPI
+################################################################################
 
 ### exit callback
 # dbg: pydbg instance
@@ -27,31 +42,64 @@ def cb_exit_SendASPI32Command(dbg, args, ret):
         # Set 'x' to the ASPI response code
         x = ret
     SCSI_DecodeSRB(dbg, args[0])
-    print "\tASPI return code=0x%02X\n\n" % x,
+    print "\tASPI return code=0x%02X (%s)\n\n" % (x, SCSI_AspiStatusStr(x)),
+    #print dbg.dump_context()
+    return DBG_CONTINUE
+
+################################################################################
+## CALLBACKS -- POLAROID PFR LIBRARY
+################################################################################
+
+def cb_entry_pfr_DP_ExposureWarning(dbg, args):
+    print ">>> ENTRY: DP_ExposureWarning:, args=", args
+    #print dbg.dump_context()
+    return DBG_CONTINUE
+
+def cb_exit_pfr_DP_ExposureWarning(dbg, args, ret):
+    print "<<< EXIT:  DP_ExposureWarning, ret=", ret
     #print dbg.dump_context()
     return DBG_CONTINUE
 
 
+def cb_entry_pfr_DP_DownLoadFilms(dbg, args):
+    print ">>> ENTRY: DP_DownLoadFilms, args=", args
+    #print dbg.dump_context()
+    return DBG_CONTINUE
+
+def cb_exit_pfr_DP_DownLoadFilms(dbg, args, ret):
+    print "<<< EXIT:  DP_DownLoadFilms, ret=", ret
+    #print dbg.dump_context()
+    return DBG_CONTINUE
+
+################################################################################
+
 # Set a hook on a DLL function
-def hook(dbg, dll, func, entry_cb, exit_cb = None):
+def hook(dbg, dll, func, nparams, entry_cb, exit_cb = None):
+    print ">>> Hooking ", dll, ":", func, "with ", nparams, " args"
     hook_addr = dbg.func_resolve_debuggee(dll, func)
     if hook_addr:
-        hooks.add(dbg, hook_addr, 1, None, exit_cb)
+        hooks.add(dbg, hook_addr, nparams, entry_cb, exit_cb)
     else:
-        sys.exit(-1)
+        print "!!! Couldn't resolve address of %s in %s!" % (func, dll)
 
 ### Called when a DLL is loaded
 # dbg: pydbg instance
 def handle_load_dll(dbg):
     last_dll = dbg.get_system_dll(-1).name.lower()
-    #print "DLL load: %s" % last_dll.name.lower()
+    print "DLL load: %s" % last_dll
     if last_dll == "wnaspi32.dll":
-        # ASPI library in place.
-        hook(dbg, last_dll, "SendASPI32Command", cb_entry_SendASPI32Command, cb_exit_SendASPI32Command)
+        # ASPI DLL just loaded... set the BPs
+        print "ASPI DLL loaded"
+        hook(dbg, last_dll, "SendASPI32Command", 1, None, cb_exit_SendASPI32Command)
+
+    elif last_dll == "pfr.dll":
+        # Polaroid Palette DLL just loaded... set the BPs
+        hook(dbg, last_dll, "_DP_DownLoadFilms", 0, cb_entry_pfr_DP_DownLoadFilms, cb_exit_pfr_DP_DownLoadFilms)
+        hook(dbg, last_dll, "_DP_ExposureWarning@4", 1, cb_entry_pfr_DP_ExposureWarning, cb_exit_pfr_DP_ExposureWarning)
 
     return DBG_CONTINUE
 
-###################################################
+################################################################################
 
 # Initialise PyDbg
 dbg = pydbg()
