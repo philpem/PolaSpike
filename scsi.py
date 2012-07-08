@@ -32,6 +32,39 @@ SS_SECURITY_VIOLATION = 0xE2
 SS_FAILED_INIT = 0xE3
 SS_BUFFER_TOO_BIG = 0xE6
 
+def SCSI_AspiStatusStr(code):
+    """
+    Decode an ASPI error code byte into a human-readable string
+    """
+    if code == SS_PENDING:
+        return "Operation pending"
+    elif code == SS_COMP:
+        return "Operation complete"
+    elif code == SS_ABORTED:
+        return "Operation aborted"
+    elif code == SS_ABORT_FAIL:
+        return "Operation failed to abort"
+    elif code == SS_ERR:
+        return "Error condition"
+    elif code == SS_INVALID_CMD:
+        return "Invalid command"
+    elif code == SS_INVALID_HA:
+        return "Invalid Host Adapter number"
+    elif code == SS_NO_DEVICE:
+        return "No device"
+    elif code == SS_INVALID_SRB:
+        return "Invalid SRB"
+    elif code == SS_BUFFER_ALIGN:
+        return "Buffer alignment error"
+    elif code == SS_SECURITY_VIOLATION:
+        return "Security violation"
+    elif code == SS_FAILED_INIT:
+        return "ASPI failed to initialise"
+    elif code == SS_BUFFER_TOO_BIG:
+        return "Buffer too big"
+    else:
+        return "Unknown error"
+
 def SCSI_DecodeSRB(dbg, addr):
     # read the SRB header
     mem = dbg.read_process_memory(addr, 8)
