@@ -93,9 +93,9 @@ def SCSI_DecodeSRB(dbg, addr):
         #print srb
 
         # decode SCB direction
-        if (srb_hdr and 0x08):
+        if (srb_hdr['SRB_Flags'] & 0x08):
             dir = "IN"
-        elif (srb_hdr and 0x10):
+        elif (srb_hdr['SRB_Flags'] & 0x10):
             dir = "OUT"
         else:
             dir = "unknown!"
