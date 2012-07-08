@@ -41,7 +41,7 @@ def cb_exit_SendASPI32Command(dbg, args, ret):
     if (ret == SS_PENDING):
         # Status is PENDING. Poll for transaction completion.
         x = SS_PENDING
-        while x != SS_COMP:
+        while x == SS_PENDING:
             x = unpack("B", dbg.read_process_memory(args[0]+1, 1))[0]
     else:
         # Set 'x' to the ASPI response code
