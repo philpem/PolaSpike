@@ -93,15 +93,20 @@ def SCSI_DecodeSRB(dbg, addr):
         #print srb
 
         # decode SCB direction
+        has_data = True
         if (srb_hdr['SRB_Flags'] & 0x08):
             dir = "IN"
         elif (srb_hdr['SRB_Flags'] & 0x10):
             dir = "OUT"
+        elif (srb_hdr['SRB_Flags'] & 0x18):
+            dir = "ILLEGAL (IN and OUT are mutually exclusive!)"
         else:
-            dir = "unknown!"
+            dir = "no data to transfer"
+            has_data = False
 
         print "HA/TA/LUN %d:%d:%d   SC_EXEC_SCSI_CMD   %s" % (srb_hdr['SRB_HaId'], srb['SRB_Target'], srb['SRB_Lun'], dir)
         cdb = dbg.read_process_memory(addr+48, srb['SRB_CDBLen'])
         buf = dbg.read_process_memory(srb['SRB_BufPtr'], srb['SRB_BufLen'])
         print "\tCDB   (%4d): %s" % (len(cdb), dbg.hex_dump(cdb, prefix="\t\t")[2:]),
-        print "\tBUF   (%4d): %s" % (len(buf), dbg.hex_dump(buf, prefix="\t\t")[2:]),
+        if has_data:
+            print "\tBUF   (%4d): %s" % (len(buf), dbg.hex_dump(buf, prefix="\t\t")[2:]),
